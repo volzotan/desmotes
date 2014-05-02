@@ -1,0 +1,363 @@
+<html>
+    <head>
+        <title>Desmotes</title>
+
+        <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+        <style>
+            .container {
+                width: 1000px; 
+                margin-top: 20px;
+            }
+
+            ul li {
+                list-style: none;
+            }
+        </style>
+
+        <style>
+
+            .line {
+              fill: none;
+              stroke: steelblue;
+              stroke-width: 1.5px;
+            }
+
+            .chart rect {
+              fill: #000;
+              stroke-width: 0px;
+              opacity: 0.5;
+            }
+
+            .axis text {
+              font: 10px sans-serif;
+            }
+
+            .axis path,
+            .axis line {
+              fill: none;
+              stroke: #000;
+              shape-rendering: crispEdges;
+            }
+
+            .calendarview rect {
+                fill: #DDD;
+            }
+
+            .minutegraph rect {
+                /* fill: #999; */
+                stroke-width: 0px;
+            }
+
+            .d3-tip {
+                line-height: 1;
+                font-weight: bold;
+                padding: 12px;
+                background: rgba(0, 0, 0, 0.8);
+                color: #fff;
+                border-radius: 2px;
+            }
+
+            .d3-tip:after {
+                box-sizing: border-box;
+                display: inline;
+                font-size: 10px;
+                width: 100%;
+                line-height: 1;
+                color: rgba(0, 0, 0, 0.8);
+                content: "\25BC";
+                position: absolute;
+                text-align: center;
+            }
+
+            .d3-tip.n:after {
+                margin: -3px 0 0 0;
+                top: 100%;
+                left: 0;
+            }
+        </style>
+
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+        <script type="text/javascript" src="data.json"></script>
+        
+    </head>
+    <body>
+        <div class="container">
+
+            <div style="overflow: scroll; padding: 0 5px; margin-bottom: 10px">
+                <svg class="chart"></svg>
+            </div>
+
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Weekday View</div>
+                        <div class="panel-body">
+                            <svg class="calendarview"></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Minute Graph</div>
+                        <div class="panel-body">
+                            <div class="minutegraph" style="margin: 0 auto;">
+                                <svg></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Weight</div>
+                        <div class="panel-body">
+                            <div class="weightdata" style="margin: 0 auto;">
+                                <svg></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <script type="text/javascript">
+            var combinedData = JSON.parse(data),
+                graphData = combinedData["graph"],
+                minuteData = combinedData["minute"],
+                dayData = combinedData["day"],
+                weightData = combinedData["weight"];
+
+            var graphHeight = 200,
+                graphWidth = 5000,
+                margin = 30;
+
+            // GRAPH
+
+            var min = d3.min(graphData, function(obj) {
+                return obj["start"];
+            });
+
+            var max = d3.max(graphData, function(obj) {
+                return obj["start"];
+            });
+
+            var x = d3.time.scale()
+                        .domain([new Date(min), new Date(max)])
+                        .range([0, graphWidth]);
+
+            var y = d3.scale.linear()
+                        .domain([0, 1])
+                        .range([0, graphHeight]);
+
+            var chart = d3.select(".chart")
+                            .attr("width", graphWidth + margin)
+                            .attr("height", graphHeight + margin);
+
+            chart.append("g");
+
+            var bar = chart.selectAll("g").selectAll("rect")
+                            .data(graphData)
+                            .enter().append("rect")
+                            .attr("height", function(d) { return y(d["value"]); })
+                            .attr("x", function(d) { return x(new Date(d["start"])); })
+                            .attr("y", function(d) { return graphHeight - y(d["value"]); })
+
+            bar.attr("width", 1);
+
+            var xAxis = d3.svg.axis()
+                            .scale(x)
+                            .ticks(d3.time.days, 1)
+                            //.tickFormat(d3.time.format(''))
+                            .orient("bottom");
+
+            chart.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + graphHeight + ")")
+                .call(xAxis);
+
+
+            // DAY
+
+            var initDay = new Date(dayData[0]["timestamp"])
+            if (initDay.getDay() != 1) {
+                var add = 0;
+
+                if (initDay.getDay() == 0) {
+                    add = 6;
+                } else {
+                    add = initDay.getDay() - 1;
+                }
+
+                for (var i=0; i < add; i++) {
+                    dayData.unshift({"timestamp": 0, "value": 0});
+                }
+            }
+
+            var rect_size = 12,
+                margin = 2;
+
+            var dayColor = d3.scale.linear()
+                .domain([0, 3])
+                .range(["white", "black"])
+                .interpolate(d3.interpolateLab);
+
+            tip = d3.tip()
+                    .attr('class', 'd3-tip')
+                    .html(function(d) { 
+                        if (d["timestamp"] == 0) return "//";
+                        var format = d3.time.format('%a %d.%m.');
+                        return format(new Date(d["timestamp"])); 
+                    });
+
+            var cal = d3.select(".calendarview")
+                        .attr("width", 600)
+                        .attr("height", (dayData.length/7 + 1) * rect_size + dayData.length/7 * margin + margin);
+
+            var day = cal.selectAll("g")
+                            .data(dayData)
+                            .enter().append("rect")
+                            .attr("x", function(d, i) {
+                                var count = (i % 7);
+                                return count * rect_size + count * margin; 
+                            })
+                            .attr("y", function(d, i) {
+                                var count = Math.floor(i / 7);
+                                return count * rect_size + count * margin; 
+                            })
+                            .style("fill", function(d) { return dayColor(d["value"]); })
+                            .on('mouseover', tip.show)
+                            .on('mouseout', tip.hide);
+
+            day.attr("height", rect_size)
+                .attr("width", rect_size);
+
+            day.call(tip)
+
+
+            // MINUTE
+
+            var color = d3.scale.linear()
+                .domain([0, d3.max(minuteData)])
+                .range(["white", "black"])
+                .interpolate(d3.interpolateLab);
+
+            console.log(minuteData.length);
+
+            var minutegraph = d3.select(".minutegraph svg")
+                                .attr("height", 50)
+                                .attr("width", 300)
+                                .append("g")
+                                .attr("transform", "translate(6,0)");
+
+            d3.select(".minutegraph").style("width", 300);
+
+            var minutes = minutegraph.selectAll("g")
+                            .data(minuteData)
+                            .enter().append("rect")
+                            .attr("x", function(d, i) { return i; })
+                            .style("fill", function(d) { return color(d); });
+                            
+            minutes.attr("y", 10)
+                    .attr("width", 1)
+                    .attr("height", 10);
+
+            var minuteScale = d3.time.scale()
+                    .domain([0 - 3600000, 86400000 - 3600000]) // 1000 * 60 * 60 * 24, offset 1h
+                    .range([0, 144*2]);
+
+            var xAxisMinutes = d3.svg.axis()
+                                .scale(minuteScale)
+                                .ticks(d3.time.hours, 2)
+                                .tickFormat(d3.time.format('%H'))
+                                .orient("bottom");
+
+            minutegraph.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + 30 + ")")
+                .call(xAxisMinutes);
+
+
+            // WEIGHT
+
+            if (weightData.length > 0) {
+
+                var weightLine = d3.select(".weightdata svg");
+
+                var min = d3.min(weightData, function(obj) {
+                    return obj["timestamp"];
+                });
+
+                var max = d3.max(weightData, function(obj) {
+                    return obj["timestamp"];
+                });
+
+                var min_weight = d3.min(weightData, function(obj) {
+                    return obj["value"];
+                });
+
+                var max_weight = d3.max(weightData, function(obj) {
+                    return obj["value"];
+                });
+
+                var xLine = d3.time.scale()
+                    .domain([new Date(min), new Date(max)])
+                    .range([0, 280]);
+
+                var yLine = d3.scale.linear()
+                    .domain([min_weight - 20, max_weight + 20])
+                    .range([120, 0]);
+
+                var xAxisLine = d3.svg.axis()
+                    .scale(xLine)
+                    .orient("bottom");
+
+                var yAxisLine = d3.svg.axis()
+                    .scale(yLine)
+                    .orient("left");
+
+                var line = d3.svg.line()
+                    .x(function(d) { return xLine(new Date(d["timestamp"])); })
+                    .y(function(d) { return yLine(d["value"]); });
+
+                weightLine.append("g")
+                        .attr("transform", "translate(10, 0)")
+                    .append("path")
+                        .datum(weightData)
+                        .attr("class", "line")
+                        .attr("d", line);
+
+                weightLine.selectAll("g").selectAll("g")
+                                .data(weightData)
+                                .enter().append("circle")
+                                .attr("cx", function(d, i) { return xLine(new Date(d["timestamp"])); })
+                                .attr("cy", function(d, i) { return yLine(d["value"]); });
+
+                d3.selectAll(".weightdata svg circle").attr("r", 2).attr("fill", "steelblue");
+
+                d3.select(".weightdata").style("width", 300);
+                weightLine.attr("height", 140)
+                            .attr("width", 300);
+
+                // var minuteScale = d3.time.scale()
+                //         .domain([0 - 3600000, 86400000 - 3600000]) // 1000 * 60 * 60 * 24, offset 1h
+                //         .range([0, 144*2]);
+
+                var xAxisWeight = d3.svg.axis()
+                                    .scale(xLine)
+                                    .ticks(d3.time.days, 1)
+                                    //.tickFormat(d3.time.format('%H'))
+                                    .orient("bottom");
+
+                weightLine.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", "translate(10," + 121 + ")")
+                    .call(xAxisWeight);
+
+            }
+
+        </script>
+    </body>
+</html>
