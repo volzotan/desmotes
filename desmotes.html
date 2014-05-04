@@ -14,14 +14,27 @@
             ul li {
                 list-style: none;
             }
+
+            .stats ul {
+                margin-right: 40px;
+            }
+
+            .stats span {
+                float: right;
+                font-weight: bold;
+            }
         </style>
 
         <style>
 
             .line {
               fill: none;
-              stroke: steelblue;
+              stroke: black;
               stroke-width: 1.5px;
+            }
+
+            circle {
+              fill: black;
             }
 
             .chart rect {
@@ -95,7 +108,9 @@
                     <div class="panel panel-default">
                         <div class="panel-heading">Weekday View</div>
                         <div class="panel-body">
-                            <svg class="calendarview"></svg>
+                            <div class="calendarview" style="margin: 0 auto;">
+                                <svg></svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -105,6 +120,15 @@
                         <div class="panel-body">
                             <div class="minutegraph" style="margin: 0 auto;">
                                 <svg></svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Data</div>
+                        <div class="panel-body">
+                            <div class="stats">
+                                <ul>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -212,9 +236,11 @@
                         return format(new Date(d["timestamp"])); 
                     });
 
-            var cal = d3.select(".calendarview")
-                        .attr("width", 600)
+            var cal = d3.select(".calendarview svg")
+                        .attr("width", 96)
                         .attr("height", (dayData.length/7 + 1) * rect_size + dayData.length/7 * margin + margin);
+
+            d3.select(".calendarview").style("width", 96);
 
             var day = cal.selectAll("g")
                             .data(dayData)
@@ -307,7 +333,7 @@
                     .range([0, 280]);
 
                 var yLine = d3.scale.linear()
-                    .domain([min_weight - 20, max_weight + 20])
+                    .domain([min_weight - 5, max_weight + 5])
                     .range([120, 0]);
 
                 var xAxisLine = d3.svg.axis()
@@ -335,26 +361,46 @@
                                 .attr("cx", function(d, i) { return xLine(new Date(d["timestamp"])); })
                                 .attr("cy", function(d, i) { return yLine(d["value"]); });
 
-                d3.selectAll(".weightdata svg circle").attr("r", 2).attr("fill", "steelblue");
+                d3.selectAll(".weightdata svg circle").attr("r", 2);
 
                 d3.select(".weightdata").style("width", 300);
                 weightLine.attr("height", 140)
                             .attr("width", 300);
 
-                // var minuteScale = d3.time.scale()
-                //         .domain([0 - 3600000, 86400000 - 3600000]) // 1000 * 60 * 60 * 24, offset 1h
-                //         .range([0, 144*2]);
-
                 var xAxisWeight = d3.svg.axis()
                                     .scale(xLine)
                                     .ticks(d3.time.days, 1)
-                                    //.tickFormat(d3.time.format('%H'))
                                     .orient("bottom");
 
                 weightLine.append("g")
                     .attr("class", "x axis")
                     .attr("transform", "translate(10," + 121 + ")")
                     .call(xAxisWeight);
+
+
+                // STATS
+
+                var formatter = d3.time.format("%d/%m/%Y");
+
+                var activeDays = 0;
+
+                for (var i = 0; i < dayData.length; i++) {
+                    if (dayData[i]["value"] > 0) activeDays++;
+                }
+
+                var statData = [
+                                    ["range", formatter(new Date(dayData[0]["timestamp"])) + " - " + formatter(new Date(dayData[dayData.length-1]["timestamp"]))], 
+                                    ["days", dayData.length], 
+                                    ["active days", activeDays]
+                                ];
+
+                var stats = d3.select(".stats ul").selectAll("ul")
+                                                    .data(statData)
+                                                    .enter()
+                                                    .append("li")
+                                                    .text(function (d) { return d[0]; })
+                                                    .append("span")
+                                                    .text(function (d) { return d[1]; });
 
             }
 

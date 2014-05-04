@@ -9,7 +9,7 @@ a simple tool for visualizing Misfit Shine activity tracker data.
 
 You must get hold of the database where the misfit app stores your activity data and drop it in the directory.
 
-Either scrape them from your iPhone Backup or copy via iTunes ( Apps > File Sharing > Misfit > Select Prometheus.sqlite from the list )
+Either scrape them from your iPhone backup or copy via iTunes ( Apps > File Sharing > Misfit > Select Prometheus.sqlite from the list )
 
     python desmotes.py
 
