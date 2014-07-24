@@ -330,11 +330,11 @@
 
                 var xLine = d3.time.scale()
                     .domain([new Date(min), new Date(max)])
-                    .range([0, 280]);
+                    .range([0, 260]);
 
                 var yLine = d3.scale.linear()
-                    .domain([min_weight - 5, max_weight + 5])
-                    .range([120, 0]);
+                    .domain([min_weight - 3, max_weight + 3])
+                    .range([110, 0]);
 
                 var xAxisLine = d3.svg.axis()
                     .scale(xLine)
@@ -349,7 +349,7 @@
                     .y(function(d) { return yLine(d["value"]); });
 
                 weightLine.append("g")
-                        .attr("transform", "translate(10, 0)")
+                        .attr("transform", "translate(10, 10)")
                     .append("path")
                         .datum(weightData)
                         .attr("class", "line")
@@ -369,13 +369,23 @@
 
                 var xAxisWeight = d3.svg.axis()
                                     .scale(xLine)
-                                    .ticks(d3.time.days, 1)
+                                    .ticks(d3.time.months, 1)
                                     .orient("bottom");
+
+                var yAxisWeight = d3.svg.axis()
+                                    .scale(yLine)
+                                    .ticks(5)
+                                    .orient("right");
 
                 weightLine.append("g")
                     .attr("class", "x axis")
                     .attr("transform", "translate(10," + 121 + ")")
                     .call(xAxisWeight);
+
+                weightLine.append("g")
+                    .attr("class", "y axis")
+                    .attr("transform", "translate(280," + 10 + ")")
+                    .call(yAxisWeight);
 
 
                 // STATS
